@@ -127,6 +127,7 @@ class VerifyForgotPasswordOtpAPI(GenericAPIView):
         otp_object.is_verified = True
         otp_object.save()
 
+
         return Response({
             "status": True,
             "message": "OTP verified successfully."
