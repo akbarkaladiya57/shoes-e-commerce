@@ -1,4 +1,6 @@
-from django.shortcuts import render
+import random
+from django.utils import timezone
+
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -83,7 +85,7 @@ class SendOtpForForgotPassAPI(GenericAPIView):
 
         otp_code = str(random.randint(1000,9999))
 
-        OtpVerification.objects.create(user=user, otp=otp_code)
+        OtpVerification.objects.create(user=user, otp=otp_code, expires_at=timezone.now() + timezone.timedelta(minutes=5))
 
         return Response({
             "status": True,

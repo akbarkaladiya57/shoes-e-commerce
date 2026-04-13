@@ -1,10 +1,7 @@
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-from django.db import models
-from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
 from user_app.manager import UserManager
 
 # Create your models here.
@@ -30,12 +27,18 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class OtpVerification(models.Model):
+
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otps")
     otp = models.CharField(max_length=4)
     is_verified = models.BooleanField(default=False)
     is_used = models.BooleanField(default=False)
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
 
     def __str__(self):
         return f"{self.user.email} - {self.otp}"
