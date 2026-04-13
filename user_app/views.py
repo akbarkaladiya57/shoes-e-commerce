@@ -150,6 +150,7 @@ class ResetPasswordAPI(GenericAPIView):
         user.set_password(new_password)
         user.save()
 
+
         otp_obj.is_used = True
         otp_obj.save()
 
