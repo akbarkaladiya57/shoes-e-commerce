@@ -11,3 +11,11 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ["id","name","brand","price","description","is_male","is_female","is_child","category","size","color"]
+
+
+class ProductRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ["id", "name", "brand", "price", "description", "is_male", "is_female", "is_child", "category", "size",
+                  "color"]
+        read_only_fields = ["id","name"]

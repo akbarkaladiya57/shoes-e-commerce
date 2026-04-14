@@ -21,6 +21,8 @@ class Product(TimeStamp):
     size = models.JSONField(default=list,blank=True)
     color = models.CharField(max_length=50)
 
+    is_delete = models.BooleanField(default=False)
+
     def __str__(self):
         return f"name : {self.name} | brand :{self.brand} | category : {self.category}"
 
