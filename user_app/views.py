@@ -137,6 +137,7 @@ class VerifyForgotPasswordOtpAPI(GenericAPIView):
 
 
 
+
 class ResetPasswordAPI(GenericAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [AllowAny]
