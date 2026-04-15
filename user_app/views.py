@@ -4,6 +4,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_200_OK
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from user_app.models import User, OtpVerification
 from user_app.serializers import RegisterSerializer, LoginSerializer, ForgotPasswordSerializer,VerifyOtpSerializer, ResetPasswordSerializer
@@ -61,9 +62,14 @@ class UserLoginAPI(GenericAPIView):
         if not user.check_password(password):
             return Response({"message": "Invalid credentials"},status=HTTP_400_BAD_REQUEST)
 
+        refresh = RefreshToken.for_user(user)
         return Response({
             "status" : True,
-            "message" : "user logged in successfully "
+            "message" : "user logged in successfully ",
+            "tokens" : {
+                "refresh" : str(refresh),
+                "access": str(refresh.access_token)
+            }
         },status=HTTP_200_OK)
 
 
