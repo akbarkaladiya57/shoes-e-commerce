@@ -3,7 +3,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView, Re
     GenericAPIView, ListAPIView
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.response import Response
-from rest_framework.status import HTTP_204_NO_CONTENT
+from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_200_OK
 from rest_framework.views import APIView
 
 from product_app.models import Category, Product, Rating, AvgRate
@@ -37,7 +37,7 @@ class ProductRetrieveUpdateAPI(RetrieveUpdateDestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         self.perform_destroy(self.get_object())
-        return Response({"message" : "product soft delete successfully"},status=HTTP_204_NO_CONTENT)
+        return Response({"status" : True,"message" : "product soft delete successfully"},status=HTTP_204_NO_CONTENT)
 
 class AddRatingAPI(GenericAPIView):
     serializer_class = RatingSerializer
@@ -75,7 +75,7 @@ class AddRatingAPI(GenericAPIView):
             "message": "Rating added successfully",
             "average_rating": avg_rating,
             "total_count": total_count
-        })
+        },status=HTTP_201_CREATED)
 
 
 class ProductRatingsAPI(ListAPIView):
@@ -103,6 +103,7 @@ class ProductAverageAPI(APIView):
         )
 
         return Response({
+            "status" : True,
             "average_rating": avg_data["avg_rating"],
             "total_count": avg_data["total"]
-        })
+        },status=HTTP_200_OK)
