@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from product_app.models import Category, Product
+from product_app.models import Category, Product, Rating
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -19,3 +19,15 @@ class ProductRUDSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "brand", "price", "description", "is_male", "is_female", "is_child", "category", "size",
                   "color"]
         read_only_fields = ["id","name"]
+
+
+
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ["product", "rate"]
+
+    def validate_rate(self, value):
+        if value < 0 or value > 5:
+            raise serializers.ValidationError("Rating must be between 0 and 5")
+        return value
