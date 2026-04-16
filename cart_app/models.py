@@ -25,9 +25,13 @@ class CartItem(TimeStamp):
 
 
 class PromoCode(TimeStamp):
+    TYPE_CHOICE = (
+        ("flat","flat"),
+        ("percentage","percentage")
+    )
     name = models.CharField(max_length=250)
     value = models.PositiveIntegerField()
-    type = models.CharField(max_length=50)
+    type = models.CharField(max_length=50,choices=TYPE_CHOICE)
 
     def __str__(self):
         return f"name : {self.name} | value :{self.value}"

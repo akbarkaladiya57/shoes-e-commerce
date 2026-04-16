@@ -39,7 +39,7 @@ class AddToCartAPI(GenericAPIView):
             item.quantity += quantity
             item.save()
 
-        return Response({"status" : True,"message": "Item added to cart"},status=HTTP_201_CREATED)
+        return Response({"status": True, "message": "Item added to cart"}, status=HTTP_201_CREATED)
 
 
 class CartDetailAPI(APIView):
@@ -58,11 +58,11 @@ class CartDetailAPI(APIView):
         total_price = sum(item.product.price * item.quantity for item in items)
 
         return Response({
-            "status" : True,
+            "status": True,
             "cart_id": cart.id,
             "items": serializer.data,
-            "total price" : total_price
-        },status=HTTP_200_OK)
+            "total price": total_price
+        }, status=HTTP_200_OK)
 
 
 class UpdateCartItemAPI(GenericAPIView):
@@ -82,7 +82,7 @@ class UpdateCartItemAPI(GenericAPIView):
         item.quantity = int(quantity)
         item.save()
 
-        return Response({"status" : True,"message": "Quantity updated"},status=HTTP_202_ACCEPTED)
+        return Response({"status": True, "message": "Quantity updated"}, status=HTTP_202_ACCEPTED)
 
 
 class RemoveCartItemAPI(GenericAPIView):
@@ -92,28 +92,28 @@ class RemoveCartItemAPI(GenericAPIView):
         try:
             item = CartItem.objects.get(id=item_id, cart__user=request.user)
         except CartItem.DoesNotExist:
-            return Response({"status" : False,"error": "Item not found"}, status=HTTP_400_BAD_REQUEST)
+            return Response({"status": False, "error": "Item not found"}, status=HTTP_400_BAD_REQUEST)
 
         item.delete()
 
-        return Response({"status" : True,"message": "Item removed"},status=HTTP_204_NO_CONTENT)
+        return Response({"status": True, "message": "Item removed"}, status=HTTP_204_NO_CONTENT)
 
 
 class ApplyPromoAPI(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        code = request.data.get("code")
+    def get(self, request):
+        code = request.query_params.get("code")
 
         try:
             promo = PromoCode.objects.get(name=code)
         except PromoCode.DoesNotExist:
-            return Response({"status" : False,"error": "Invalid promo code"}, status=HTTP_400_BAD_REQUEST)
+            return Response({"status": False, "error": "Invalid promo code"}, status=HTTP_400_BAD_REQUEST)
 
         cart = Cart.objects.filter(user=request.user).first()
 
         if not cart:
-            return Response({"status" : False,"error": "Cart is empty"}, status=HTTP_400_BAD_REQUEST)
+            return Response({"status": False, "error": "Cart is empty"}, status=HTTP_400_BAD_REQUEST)
 
         items = CartItem.objects.filter(cart=cart)
 
@@ -126,12 +126,11 @@ class ApplyPromoAPI(APIView):
         else:
             discount = 0
 
-        final_price = max(total - discount,
-                          )
+        final_price = total - discount
 
         return Response({
-            "status" : True,
+            "status": True,
             "total": total,
             "discount": discount,
             "final_price": final_price
-        },status=HTTP_201_CREATED)
+        }, status=HTTP_200_OK)
