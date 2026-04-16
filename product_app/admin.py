@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from product_app.models import Product, ProductImage, Category
+from product_app.models import Product, ProductImage, Category, Rating, AvgRate
 
 
 # Register your models here.
@@ -15,3 +15,11 @@ class AdminProductImage(admin.ModelAdmin):
 @admin.register(Category)
 class AdminCategory(admin.ModelAdmin):
     list_display = ["id","name"]
+
+@admin.register(Rating)
+class RatingAdmin(admin.ModelAdmin):
+    list_display = ["id","product","rate"]
+
+@admin.register(AvgRate)
+class AvgRateAdmin(admin.ModelAdmin):
+    list_display = ["id","rate","total_count","average_rating"]
