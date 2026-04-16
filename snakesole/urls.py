@@ -21,10 +21,12 @@ from django.urls import path, include
 from cart_app.urls import cart_urlpatterns
 from user_app.urls import url_patterns
 from product_app.urls import url_patterns as product_app
+from order_app.urls import urlpatterns as order_app
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("",include(url_patterns)),
     path("",include(product_app)),
     path("",include(cart_urlpatterns)),
+    path("",include(order_app)),
 ]
