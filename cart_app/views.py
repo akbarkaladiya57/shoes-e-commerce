@@ -3,7 +3,7 @@ from django.shortcuts import render
 # Create your views here.
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_202_ACCEPTED, HTTP_204_NO_CONTENT, \
     HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
@@ -134,3 +134,30 @@ class ApplyPromoAPI(APIView):
             "discount": discount,
             "final_price": final_price
         }, status=HTTP_200_OK)
+
+
+
+class CheckPromoCode(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        code = request.query_params.get("code")
+
+        # Validate input
+        if not code:
+            return Response(
+                {"status": False, "error": "Promo code is required"},
+                status=HTTP_400_BAD_REQUEST
+            )
+
+        # Check existence
+        if PromoCode.objects.filter(name=code).exists():
+            return Response(
+                {"status": True, "message": "Valid promo code"},
+                status=HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"status": False, "error": "Invalid promo code"},
+                status=HTTP_400_BAD_REQUEST
+            )

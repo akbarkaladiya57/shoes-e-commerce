@@ -27,7 +27,7 @@ class Product(TimeStamp):
         return f"name : {self.name} | brand :{self.brand} | category : {self.category}"
 
 class ProductImage(TimeStamp):
-    image = models.ImageField(upload_to="media/products")
+    image = models.ImageField(upload_to="products/")
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="images")
 
 class Category(TimeStamp):

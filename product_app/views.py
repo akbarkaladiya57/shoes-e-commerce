@@ -6,9 +6,10 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_200_OK
 from rest_framework.views import APIView
 
-from product_app.models import Category, Product, Rating, AvgRate
+from product_app.models import Category, Product, Rating, AvgRate, ProductImage
 from product_app.permission import AdminOrReadOnly
-from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer
+from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer, \
+    ProductImageSerializer
 
 
 # Create your views here.
@@ -107,3 +108,25 @@ class ProductAverageAPI(APIView):
             "average_rating": avg_data["avg_rating"],
             "total_count": avg_data["total"]
         },status=HTTP_200_OK)
+
+
+class ProductImageAPI(ListCreateAPIView):
+    queryset = ProductImage.objects.all()
+    serializer_class = ProductImageSerializer
+    permission_classes = [AdminOrReadOnly]
+
+
+class ProductImageRUDAPI(RetrieveUpdateDestroyAPIView):
+    queryset = ProductImage.objects.all()
+    serializer_class = ProductImageSerializer
+    permission_classes = [AdminOrReadOnly]
+
+
+class ProductWiseImageAPI(ListAPIView):
+    serializer_class = ProductImageSerializer
+
+    def get_queryset(self):
+        product_id = self.kwargs["product_id"]
+        return ProductImage.objects.filter(product_id=product_id)
+
+

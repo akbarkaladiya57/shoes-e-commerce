@@ -18,6 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from django.conf import settings
+from django.conf.urls.static import static
+
 from cart_app.urls import cart_urlpatterns
 from user_app.urls import url_patterns
 from product_app.urls import url_patterns as product_app
@@ -30,3 +33,5 @@ urlpatterns = [
     path("",include(cart_urlpatterns)),
     path("",include(order_app)),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
