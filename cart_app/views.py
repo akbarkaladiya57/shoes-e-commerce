@@ -126,7 +126,8 @@ class ApplyPromoAPI(APIView):
         else:
             discount = 0
 
-        final_price = max(total - discount, 0)
+        final_price = max(total - discount,
+                          )
 
         return Response({
             "status" : True,
