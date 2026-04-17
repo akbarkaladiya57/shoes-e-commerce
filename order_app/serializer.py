@@ -13,7 +13,7 @@ class AddressSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ["id","user","quantity","product"]
+        fields = ["id","user","quantity","product","order"]
         read_only_fields = ["id","user"]
 
     def validate_quantity(self,value):
@@ -24,4 +24,4 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ["id","address","total_amount","payment_method","status","discount","promo_code","order_items"]
+        fields = ["id","address","total_amount","payment_method","status","discount","promo_code"]
