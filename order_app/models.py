@@ -26,15 +26,16 @@ class Address(TimeStamp):
     location = models.TextField()
 
     def __str__(self):
-        return f"name :{self.user.name} | city :{self.city}"
+        return f"name :{self.user.username} | city :{self.city}"
 
 class OrderItem(TimeStamp):
     user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="items")
     quantity = models.PositiveIntegerField()
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="order_items")
+    order = models.ForeignKey("Order",on_delete=models.CASCADE,related_name="items",null=True,blank=True)
 
     def __str__(self):
-        return f"name :{self.user.name} | quantity :{self.quantity}"
+        return f"name :{self.user.username} | quantity :{self.quantity}"
 
 class Order(TimeStamp):
     PAYMENT_CHOICES = (('credit cart' ,'Credit Cart'),('UPI','UPI'),('Net Banking','Net Banking'),('Cash on delivery','Cash On Delivery'))
@@ -43,9 +44,8 @@ class Order(TimeStamp):
     total_amount = models.DecimalField(max_digits=10,decimal_places=2)
     payment_method = models.CharField(max_length=50,choices=PAYMENT_CHOICES,default="UPI")
     status = models.CharField(max_length=50,default="pending")
-    discount = models.DecimalField(max_digits=10,decimal_places=2)
+    discount = models.DecimalField(max_digits=10,decimal_places=2,default=0)
     promo_code = models.ForeignKey(PromoCode,on_delete=models.SET_NULL,null=True,blank=True,related_name="codes")
-    order_items = models.ForeignKey(OrderItem,on_delete=models.CASCADE,related_name="orders")
 
     def __str__(self):
-        return f"name :{self.order_items} | total amount :{self.total_amount}"
+        return f"name :{self.discount} | total amount :{self.total_amount}"

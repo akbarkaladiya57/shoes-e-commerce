@@ -10,8 +10,8 @@ class AddressAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ["id","user","quantity","product"]
+    list_display = ["id","user","quantity","product","order"]
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ["id","address","total_amount","payment_method","status","discount","promo_code","order_items"]
+    list_display = ["id","address","total_amount","payment_method","status","discount","promo_code"]

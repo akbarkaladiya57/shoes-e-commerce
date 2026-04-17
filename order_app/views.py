@@ -1,10 +1,11 @@
 from rest_framework import viewsets
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
-from order_app.models import Address, OrderItem
-from order_app.serializer import AddressSerializer, OrderItemSerializer
+from order_app.models import Address, OrderItem, Order
+from order_app.serializer import AddressSerializer, OrderItemSerializer, OrderSerializer
 
 
 # Create your views here.
@@ -77,3 +78,8 @@ class OrderItemAPI(viewsets.ModelViewSet):
             "success": True,
             "message": "Item deleted successfully"
         }, status=HTTP_200_OK)
+
+class OrderAPI(ListCreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
