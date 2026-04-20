@@ -110,10 +110,10 @@ class ProductAverageAPI(APIView):
         },status=HTTP_200_OK)
 
 
-class ProductImageAPI(ListCreateAPIView):
-    queryset = ProductImage.objects.all()
-    serializer_class = ProductImageSerializer
-    permission_classes = [AdminOrReadOnly]
+# class ProductImageAPI(ListCreateAPIView):
+#     queryset = ProductImage.objects.all()
+#     serializer_class = ProductImageSerializer
+#     permission_classes = [AdminOrReadOnly]
 
 
 class ProductImageRUDAPI(RetrieveUpdateDestroyAPIView):
