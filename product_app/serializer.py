@@ -15,10 +15,11 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+
     class Meta:
-        images = ProductImageSerializer(many=True, read_only=True)
         model = Product
-        fields = ["id","name","brand","price","description","is_male","is_female","is_child","category","size","color"]
+        fields = ["id","name","brand","price","description","is_male","is_female","is_child","category","size","color","images"]
 
 
 class ProductRUDSerializer(serializers.ModelSerializer):

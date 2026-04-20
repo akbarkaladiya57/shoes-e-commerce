@@ -1,18 +1,12 @@
 from django.db import models
 
 from cart_app.models import PromoCode
-from product_app.models import Product
+from product_app.models import Product, TimeStamp
 from user_app.models import User
 
 
-# Create your models here.
+# Create your models here
 
-class TimeStamp(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
 
 class Address(TimeStamp):
     user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="address")
@@ -36,6 +30,7 @@ class OrderItem(TimeStamp):
 
     def __str__(self):
         return f"name :{self.user.username} | quantity :{self.quantity}"
+
 
 class Order(TimeStamp):
     PAYMENT_CHOICES = (('credit cart' ,'Credit Cart'),('UPI','UPI'),('Net Banking','Net Banking'),('Cash on delivery','Cash On Delivery'))
