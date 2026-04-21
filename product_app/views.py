@@ -10,7 +10,7 @@ from product_app.models import Category, Product, Rating, AvgRate, ProductImage
 from product_app.permission import AdminOrReadOnly
 from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer, \
     ProductImageSerializer
-
+from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 
 # Create your views here.
 class CategoryAPI(ListCreateAPIView):
@@ -23,6 +23,7 @@ class ProductCreateAPI(ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [AdminOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser,JSONParser]
 
 
 class ProductRetrieveUpdateAPI(RetrieveUpdateDestroyAPIView):
