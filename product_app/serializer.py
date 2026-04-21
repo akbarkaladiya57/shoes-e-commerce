@@ -11,33 +11,15 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ["id", "image"]
+        fields = ["id", "image", "product"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    product_images = ProductImageSerializer(many=True, read_only=True, source="images")
-
-    images = serializers.ListField(
-        child=serializers.ImageField(),
-        write_only=True
-    )
+    images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
-        fields = [
-            "id", "name", "brand", "price", "description",
-            "is_male", "is_female", "is_child",
-            "category", "size", "color", "images","product_images"
-        ]
-
-    def create(self, validated_data):
-        images = validated_data.pop("images", [])
-        product = Product.objects.create(**validated_data)
-
-        for image in images:
-            ProductImage.objects.create(product=product, image=image)
-
-        return product
+        fields = ["id","name","brand","price","description","is_male","is_female","is_child","category","size","color","images"]
 
 
 class ProductRUDSerializer(serializers.ModelSerializer):
