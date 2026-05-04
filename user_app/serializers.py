@@ -62,3 +62,9 @@ class ResetPasswordSerializer(serializers.Serializer):
         attrs["user"] = user
         attrs["otp_obj"] = otp_obj
         return attrs
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id","username","email","gender","date_of_birth","mobile_no"]

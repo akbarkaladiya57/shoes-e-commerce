@@ -14,6 +14,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_of_birth = models.DateField()
     mobile_no = models.CharField(max_length=15)
 
+    is_deleted = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

@@ -1,13 +1,16 @@
 import random
 from django.utils import timezone
-from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import NotFound
+from rest_framework.generics import GenericAPIView, RetrieveUpdateAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_200_OK
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from user_app.models import User, OtpVerification
-from user_app.serializers import RegisterSerializer, LoginSerializer, ForgotPasswordSerializer,VerifyOtpSerializer, ResetPasswordSerializer
+from user_app.serializers import RegisterSerializer, LoginSerializer, ForgotPasswordSerializer, VerifyOtpSerializer, \
+    ResetPasswordSerializer, UserProfileSerializer
 
 
 # Create your views here.
@@ -34,7 +37,7 @@ class UserRegisterAPI(GenericAPIView):
         },status=HTTP_201_CREATED)
 
     def get(self,request):
-        user = User.objects.all()
+        user = User.objects.filter(is_deleted=False)
         serializer = RegisterSerializer(user, many=True)
         return Response({
             "status" : True,
@@ -164,4 +167,59 @@ class ResetPasswordAPI(GenericAPIView):
         return Response({
             "status": True,
             "message": "Password reset successfully."
+        }, status=HTTP_200_OK)
+
+
+class UserProfileAPI(RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        if user.is_deleted:
+            raise NotFound("User not found")
+        return user
+
+    def retrieve(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return Response({
+            "status": True,
+            "message": "profile fetched successfully",
+            "data": serializer.data
+        })
+
+    def patch(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
+
+        if not serializer.is_valid():
+            return Response({
+                "status": False,
+                "message": "update failed",
+                "errors": serializer.errors
+            }, status=400)
+
+        serializer.save()
+        return Response({
+            "status": True,
+            "message": "profile updated successfully",
+            "data": serializer.data
+        })
+
+class UserSoftDeleteAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+
+        if user.is_deleted:
+            raise NotFound("User already deleted")
+
+        user.is_deleted = True
+        user.is_active = False
+        user.save()
+
+        return Response({
+            "status": True,
+            "message": "User soft deleted successfully"
         }, status=HTTP_200_OK)
