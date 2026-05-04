@@ -58,7 +58,6 @@ class UserLoginAPI(GenericAPIView):
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({"message" : "Invalid credentials"},status=HTTP_400_BAD_REQUEST)
-
         if not user.check_password(password):
             return Response({"message": "Invalid credentials"},status=HTTP_400_BAD_REQUEST)
 
