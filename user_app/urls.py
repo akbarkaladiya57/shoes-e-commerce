@@ -1,15 +1,18 @@
 from django.urls import path
 
 from user_app.views import UserRegisterAPI, UserLoginAPI, SendOtpForForgotPassAPI, ResetPasswordAPI, \
-        VerifyForgotPasswordOtpAPI, UserProfileAPI, UserSoftDeleteAPI
+         UserProfileAPI, UserSoftDeleteAPI, UpdatePasswordView,RefreshTokenAPI
+                # VerifyForgotPasswordOtpAPI
 
 url_patterns = [
         path("user-register/", UserRegisterAPI.as_view(), name="Register-user"),
         path("user-login/",UserLoginAPI.as_view(), name="user-login"),
         path("otp-for-forgot-password/",SendOtpForForgotPassAPI.as_view(), name="Send-Otp-For-Forgot-Password"),
-        path("verify-otp/",VerifyForgotPasswordOtpAPI.as_view(),name="Verify-Forgot-Password-Otp"),
+        # path("verify-otp/",VerifyForgotPasswordOtpAPI.as_view(),name="Verify-Forgot-Password-Otp"),
         path("reset-password/",ResetPasswordAPI.as_view(),name="Reset-Password"),
         path('user-profile/', UserProfileAPI.as_view(), name='user-profile'),
         path('user-delete/', UserSoftDeleteAPI.as_view(), name='user-soft-delete'),
+        path('user-update-password/', UpdatePasswordView.as_view(), name='update-password'),
+        path("refresh-token/",RefreshTokenAPI.as_view(),name='refresh-token')
 
 ]

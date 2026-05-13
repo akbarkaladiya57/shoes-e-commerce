@@ -6,11 +6,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_200_OK
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 
 from user_app.models import User, OtpVerification
 from user_app.serializers import RegisterSerializer, LoginSerializer, ForgotPasswordSerializer, VerifyOtpSerializer, \
-    ResetPasswordSerializer, UserProfileSerializer
+    ResetPasswordSerializer, UserProfileSerializer, UpdatePasswordSerializer
 
 
 # Create your views here.
@@ -58,7 +60,7 @@ class UserLoginAPI(GenericAPIView):
         password = serializer.validated_data["password"]
 
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(email=email, is_deleted=False)
         except User.DoesNotExist:
             return Response({"message" : "Invalid credentials"},status=HTTP_400_BAD_REQUEST)
         if not user.check_password(password):
@@ -86,7 +88,7 @@ class SendOtpForForgotPassAPI(GenericAPIView):
 
         email = serializer.validated_data["email"]
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(email=email,is_deleted=False)
         except User.DoesNotExist:
             return Response({"message": "invalid Email."},status=HTTP_400_BAD_REQUEST)
 
@@ -101,46 +103,54 @@ class SendOtpForForgotPassAPI(GenericAPIView):
         }, status=HTTP_200_OK)
 
 
-class VerifyForgotPasswordOtpAPI(GenericAPIView):
-    serializer_class = VerifyOtpSerializer
-    permission_classes = [AllowAny]
-    def post(self,request):
-        serializer = VerifyOtpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data.get("email")
-        otp = serializer.validated_data.get("otp")
-
-        try:
-            user = User.objects.get(email=email)
-
-            otp_object = OtpVerification.objects.filter(user=user, otp=otp, is_verified=False).latest("created_at")
-
-        except User.DoesNotExist:
-            return Response(
-                {"status": False, "message": "User not found."},
-                status=HTTP_400_BAD_REQUEST
-            )
-
-        except OtpVerification.DoesNotExist:
-            return Response(
-                {"status" : False, "message" : "Invalid OTP."},
-                status= HTTP_400_BAD_REQUEST
-            )
-
-        if otp_object.is_expired:
-            return Response({
-                "status": False, "message": " OTP expired."
-            }, status=HTTP_400_BAD_REQUEST)
-
-        otp_object.is_verified = True
-        otp_object.save()
-
-
-        return Response({
-            "status": True,
-            "message": "OTP verified successfully."
-        }, status=HTTP_200_OK)
+# class VerifyForgotPasswordOtpAPI(GenericAPIView):
+#     serializer_class = VerifyOtpSerializer
+#     permission_classes = [AllowAny]
+#     def post(self,request):
+#         serializer = VerifyOtpSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#
+#         email = serializer.validated_data.get("email")
+#         otp = serializer.validated_data.get("otp")
+#         new_password = serializer.validated_data.get("new_password")
+#         confirm_password = serializer.validated_data.get("confirm_password")
+#
+#         if new_password != confirm_password:
+#             return Response(
+#                 {"status": False, "message": "Passwords do not match."},
+#                 status=HTTP_400_BAD_REQUEST
+#             )
+#
+#         try:
+#             user = User.objects.get(email=email,is_deleted=False)
+#
+#             otp_object = OtpVerification.objects.filter(user=user, otp=otp, is_verified=False).latest("created_at")
+#
+#         except User.DoesNotExist:
+#             return Response(
+#                 {"status": False, "message": "User not found."},
+#                 status=HTTP_400_BAD_REQUEST
+#             )
+#
+#         except OtpVerification.DoesNotExist:
+#             return Response(
+#                 {"status" : False, "message" : "Invalid OTP."},
+#                 status= HTTP_400_BAD_REQUEST
+#             )
+#
+#         if otp_object.is_expired:
+#             return Response({
+#                 "status": False, "message": " OTP expired."
+#             }, status=HTTP_400_BAD_REQUEST)
+#
+#         otp_object.is_verified = True
+#         otp_object.save()
+#
+#
+#         return Response({
+#             "status": True,
+#             "message": "OTP verified successfully."
+#         }, status=HTTP_200_OK)
 
 
 
@@ -159,7 +169,6 @@ class ResetPasswordAPI(GenericAPIView):
 
         user.set_password(new_password)
         user.save()
-
 
         otp_obj.is_used = True
         otp_obj.save()
@@ -189,8 +198,8 @@ class UserProfileAPI(RetrieveUpdateAPIView):
         })
 
     def patch(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)
-        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
+        user = request.user
+        serializer = self.get_serializer(user, data=request.data, partial=True)
 
         if not serializer.is_valid():
             return Response({
@@ -223,3 +232,54 @@ class UserSoftDeleteAPI(APIView):
             "status": True,
             "message": "User soft deleted successfully"
         }, status=HTTP_200_OK)
+
+class UpdatePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        serializer = UpdatePasswordSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({
+                "status": False,
+                "message": "Validation failed",
+                "errors": serializer.errors
+            }, status=400)
+
+        user = request.user
+
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response({
+                "status": False,
+                "message": "Old password is incorrect"
+            }, status=400)
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({
+            "status": True,
+            "message": "Password updated successfully"
+        })
+
+
+class RefreshTokenAPI(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = TokenRefreshSerializer
+
+    def post(self,request):
+        refresh_token =  request.data.get("refresh")
+
+        if not refresh_token:
+            return Response({"status" : False,"message" : "refresh token required"},status=HTTP_400_BAD_REQUEST)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            return Response({"status" : True,"message": "Access token refreshed successfully",
+                    "tokens": {
+                        "access": str(refresh.access_token)
+                    }
+                },
+                status=HTTP_200_OK)
+        except TokenError:
+            return Response({"status" : False, "message": "Invalid or expired refresh token"},status=HTTP_200_OK)

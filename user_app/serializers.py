@@ -32,35 +32,33 @@ class VerifyOtpSerializer(serializers.Serializer):
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     new_password = serializers.CharField(write_only=True)
-    confirm_password = serializers.CharField(write_only=True)
+    otp = serializers.CharField(max_length=4)
 
     def validate(self, attrs):
         email = attrs.get("email")
-        new_password = attrs.get("new_password")
-        confirm_password = attrs.get("confirm_password")
-
-        if new_password != confirm_password:
-            raise serializers.ValidationError("Passwords do not match.")
+        otp = attrs.get("otp")
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError("User does not exist.")
+            raise serializers.ValidationError({
+                "email": "User does not exist."
+            })
 
-        otp_obj = OtpVerification.objects.filter(
-            user=user,
-
-            is_verified=True,
-            is_used=False
-        ).order_by("-created_at").first()
-
-        if not otp_obj:
-            raise serializers.ValidationError("OTP verification required before resetting password.")
-
-
+        try:
+            otp_obj = OtpVerification.objects.get(
+                user=user,
+                otp=otp,
+                is_used=False
+            )
+        except OtpVerification.DoesNotExist:
+            raise serializers.ValidationError({
+                "otp": "Invalid OTP or OTP not verified."
+            })
 
         attrs["user"] = user
         attrs["otp_obj"] = otp_obj
+
         return attrs
 
 
@@ -68,3 +66,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id","username","email","gender","date_of_birth","mobile_no"]
+
+class UpdatePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
