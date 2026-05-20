@@ -1,15 +1,19 @@
 from django.db.models import Avg, Count
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, \
-    GenericAPIView, ListAPIView
-from rest_framework.permissions import IsAdminUser, AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, \
+    GenericAPIView, ListAPIView,RetrieveDestroyAPIView
+from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_200_OK
 from rest_framework.views import APIView
 
-from product_app.models import Category, Product, Rating, AvgRate, ProductImage
+
+from product_app.models import Category, Product, Rating, AvgRate, ProductImage, ProductLike
+from product_app.paginations import ProductPagination
+# from product_app.paginations import ProductPagination
 from product_app.permission import AdminOrReadOnly
 from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer, \
-    ProductImageSerializer
+    ProductImageSerializer, ProductLikeSerializer, ProductCardSerializer
 from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 
 # Create your views here.
@@ -17,6 +21,7 @@ class CategoryAPI(ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AdminOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
 class ProductCreateAPI(ListCreateAPIView):
@@ -131,3 +136,33 @@ class ProductWiseImageAPI(ListAPIView):
         return ProductImage.objects.filter(product_id=product_id)
 
 
+class CategoryFilterAPI(ListAPIView):
+    queryset = Product.objects.all()
+    permission_classes = [AllowAny]
+    serializer_class = ProductCardSerializer
+    pagination_class = ProductPagination
+    filter_backends = [DjangoFilterBackend]
+
+    filterset_fields = ['category','is_male','is_female','is_child','trending','special_shoes']
+
+    def get_queryset(self):
+        queryset = Product.objects.filter(is_delete=False)
+        return queryset
+
+
+class ProductLikeListCreateApiview(ListCreateAPIView):
+    serializer_class = ProductLikeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ProductLike.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ProductLikeDetailAPIView(RetrieveDestroyAPIView):
+    serializer_class = ProductLikeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ProductLike.objects.filter(user=self.request.user)

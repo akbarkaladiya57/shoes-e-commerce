@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from product_app.models import Category, Product, Rating, ProductImage
+from product_app.models import Category, Product, Rating, ProductImage, ProductLike
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id","name"]
+        fields = ["id","name","image","color"]
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "brand", "price", "description",
             "is_male", "is_female", "is_child",
-            "category", "size", "color",
+            "category", "size", "color","trending","special_shoes",
             "images",  # write
             "product_images"  # read
         ]
@@ -49,6 +49,43 @@ class ProductRUDSerializer(serializers.ModelSerializer):
                   "color"]
         read_only_fields = ["id","name"]
 
+class ProductCardSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ["id","name","brand","price","image","rating","is_liked","color"]
+
+    def get_image(self, obj):
+        first_image = obj.images.first()
+        if first_image:
+            request = self.context.get("request")
+            return request.build_absolute_uri(first_image.image.url)
+        return None
+
+    def get_rating(self, obj):
+        ratings = Rating.objects.filter(product=obj)
+
+        if ratings.exists():
+            return round(
+                sum(r.rate for r in ratings) / ratings.count(),
+                1
+            )
+
+        return 0
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+
+        if request and request.user.is_authenticated:
+            return ProductLike.objects.filter(
+                user=request.user,
+                product=obj
+            ).exists()
+
+        return False
 
 class RatingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -59,3 +96,33 @@ class RatingSerializer(serializers.ModelSerializer):
         if value < 0 or value > 5:
             raise serializers.ValidationError("Rating must be between 0 and 5")
         return value
+
+
+class ProductLikeSerializer(serializers.ModelSerializer):
+    is_liked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductLike
+        fields = ["id","user","product","is_liked"]
+        read_only_fields = ["id","user"]
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        product = attrs.get("product")
+
+        if self.instance is None:
+            if ProductLike.objects.filter(user=user,product=product).exists():
+                raise serializers.ValidationError("You already liked this product.")
+        return attrs
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+
+        if request and request.user.is_authenticated:
+            return ProductLike.objects.filter(
+                user=request.user,
+                product=obj.product
+            ).exists()
+
+        return False
+
