@@ -19,6 +19,7 @@ class CartItem(TimeStamp):
     cart = models.ForeignKey(Cart,on_delete=models.CASCADE,related_name="items")
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="items")
     quantity = models.PositiveIntegerField()
+    size = models.CharField(max_length=10, null=True, blank=True)  # 👈 add this
 
     def __str__(self):
         return f"product : {self.product.name} | quantity : {self.quantity}"

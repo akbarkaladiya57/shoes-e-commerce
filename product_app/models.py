@@ -37,6 +37,7 @@ class Product(TimeStamp):
 class ProductImage(TimeStamp):
     image = models.ImageField(upload_to="products/")
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="images")
+    image_color = models.CharField(max_length=7, validators=[hex_color_validator], blank=True, null=True)
 
 class Category(TimeStamp):
     name = models.CharField(max_length=100)
@@ -62,11 +63,12 @@ class AvgRate(TimeStamp):
     average_rating = models.DecimalField(max_digits=10, decimal_places=2)
 
 class ProductLike(TimeStamp):
-    user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="liked_products")
-    product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="liked_by_users")
+    user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="liked_products", db_index=True)
+    product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="liked_by_users", db_index=True)
 
     class Meta:
         unique_together = ('user', 'product')
+
 
     def __str__(self):
         return f"{self.user.username} liked {self.product.name}"

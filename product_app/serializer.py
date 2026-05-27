@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from rest_framework import serializers
 from product_app.models import Category, Product, Rating, ProductImage, ProductLike
 
@@ -11,14 +12,23 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ["id", "image", "product"]
+        fields = ["image", "image_color"]
+
+
+class ProductImageCreateSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+    image_color = serializers.CharField(
+        max_length=7,
+        required=False,
+        allow_null=True,
+        allow_blank=True
+    )
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    product_images = ProductImageSerializer(many=True, read_only=True, source="images")
-
-    images = serializers.ListField(
-        child=serializers.ImageField(),
+    images = ProductImageCreateSerializer(
+        many=True,
         write_only=True,
         required=False
     )
@@ -26,28 +36,94 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            "id", "name", "brand", "price", "description",
-            "is_male", "is_female", "is_child",
-            "category", "size", "color","trending","special_shoes",
-            "images",  # write
-            "product_images"  # read
+            "id", "name", "brand", "price",
+            "is_male", "is_female", "is_child","size",
+            "category", "color",
+            "images",
+            "trending","special_shoes"# read
         ]
 
-    def create(self, validated_data):
-        images = validated_data.pop("images", [])
-        product = Product.objects.create(**validated_data)
 
-        for image in images:
-            ProductImage.objects.create(product=product, image=image)
+    def create(self, validated_data):
+        validated_data.pop("images", [])
+        product = Product.objects.create(**validated_data)
 
         return product
 
+
+class ProductListSerializer(serializers.ModelSerializer):
+    product_image = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = Product
+        fields = ["id", "is_liked","trending","special_shoes","name", "brand", "price", "category", "color",
+            "is_male", "is_female", "is_child", "product_image","rating"]
+
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+
+        if request and request.user.is_authenticated:
+            return ProductLike.objects.filter(
+                user=request.user,
+                product=obj
+            ).exists()
+
+        return False
+
+    def get_rating(self, obj):
+        ratings = Rating.objects.filter(product=obj)
+
+        if ratings.exists():
+            avg_rating = ratings.aggregate(avg=Avg("rate"))["avg"]
+            return round(avg_rating, 1)
+
+        return 0
+
+    def get_product_image(self, obj):
+        request = self.context.get("request")
+
+        image = obj.images.first()
+        if image:
+            url = image.image.url
+            if request:
+                url = request.build_absolute_uri(url)
+
+            return url
+        return None
+
 class ProductRUDSerializer(serializers.ModelSerializer):
+    product_images = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
         fields = ["id", "name", "brand", "price", "description", "is_male", "is_female", "is_child", "category", "size",
-                  "color"]
+                  "color","product_images"]
         read_only_fields = ["id","name"]
+
+    def get_product_images(self, obj):
+        grouped = {}
+
+        images = obj.images.all()  # related_name="images"
+
+        for img in images:
+            color = img.image_color or "unknown"
+
+            if color not in grouped:
+                grouped[color] = []
+
+            request = self.context.get("request")
+            url = img.image.url
+
+            if request:
+                url = request.build_absolute_uri(url)
+
+            grouped[color].append(url)
+
+        return grouped
 
 class ProductCardSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()

@@ -10,7 +10,7 @@ class AdminProduct(admin.ModelAdmin):
 
 @admin.register(ProductImage)
 class AdminProductImage(admin.ModelAdmin):
-    list_display = ["id","image","product"]
+    list_display = ["id","image","product","image_color"]
 
 @admin.register(Category)
 class AdminCategory(admin.ModelAdmin):

@@ -13,7 +13,7 @@ from product_app.paginations import ProductPagination
 # from product_app.paginations import ProductPagination
 from product_app.permission import AdminOrReadOnly
 from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer, \
-    ProductImageSerializer, ProductLikeSerializer, ProductCardSerializer
+    ProductImageSerializer, ProductLikeSerializer, ProductCardSerializer, ProductListSerializer
 from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 
 # Create your views here.
@@ -26,10 +26,29 @@ class CategoryAPI(ListCreateAPIView):
 
 class ProductCreateAPI(ListCreateAPIView):
     queryset = Product.objects.all()
-    serializer_class = ProductSerializer
     permission_classes = [AdminOrReadOnly]
-    parser_classes = [MultiPartParser, FormParser,JSONParser]
 
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ProductListSerializer
+        return ProductSerializer
+
+
+    def perform_create(self, serializer):
+
+        product = serializer.save()
+
+        images = self.request.FILES.getlist("images")
+        colors = self.request.data.getlist("image_color")
+
+        for index, image in enumerate(images):
+            color = colors[index] if index < len(colors) else ""
+
+            ProductImage.objects.create(
+                product=product,
+                image=image,
+                image_color=color
+            )
 
 class ProductRetrieveUpdateAPI(RetrieveUpdateDestroyAPIView):
     serializer_class = ProductRUDSerializer
@@ -140,7 +159,7 @@ class CategoryFilterAPI(ListAPIView):
     queryset = Product.objects.all()
     permission_classes = [AllowAny]
     serializer_class = ProductCardSerializer
-    pagination_class = ProductPagination
+    # pagination_class = ProductPagination
     filter_backends = [DjangoFilterBackend]
 
     filterset_fields = ['category','is_male','is_female','is_child','trending','special_shoes']

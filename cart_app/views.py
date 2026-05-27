@@ -24,6 +24,7 @@ class AddToCartAPI(GenericAPIView):
 
         product = serializer.validated_data["product"]
         quantity = serializer.validated_data["quantity"]
+        size = serializer.validated_data.get("size")
 
         # Get or create cart
         cart, _ = Cart.objects.get_or_create(user=user)
@@ -32,6 +33,7 @@ class AddToCartAPI(GenericAPIView):
         item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
+            size = size,
             defaults={"quantity": quantity}
         )
 
@@ -54,7 +56,7 @@ class CartDetailAPI(APIView):
             return Response({"items": []})
 
         items = CartItem.objects.filter(cart=cart)
-        serializer = CartItemSerializer(items, many=True)
+        serializer = CartItemSerializer(items, many=True,context={"request": request})
         total_price = sum(item.product.price * item.quantity for item in items)
 
         return Response({
