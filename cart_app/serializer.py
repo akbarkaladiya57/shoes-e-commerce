@@ -9,6 +9,8 @@ class AddToCartSerializer(serializers.Serializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
     quantity = serializers.IntegerField()
     size = serializers.CharField(required=False)
+    color = serializers.CharField(required=False)
+
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -21,9 +23,11 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_price = serializers.CharField(source="product.price")
     product_size = serializers.CharField(source="size")
     product_image = serializers.SerializerMethodField()
+    product_color = serializers.CharField(source="color")
+
     class Meta:
         model = CartItem
-        fields = ["id", "product", "product_name", "quantity","product_image","product_price","product_size"]
+        fields = ["id", "product", "product_name", "quantity","product_image","product_price","product_size","product_color"]
 
     def get_product_image(self, obj):
         request = self.context.get("request")

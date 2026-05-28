@@ -25,6 +25,7 @@ class AddToCartAPI(GenericAPIView):
         product = serializer.validated_data["product"]
         quantity = serializer.validated_data["quantity"]
         size = serializer.validated_data.get("size")
+        color = serializer.validated_data.get("color")
 
         # Get or create cart
         cart, _ = Cart.objects.get_or_create(user=user)
@@ -34,6 +35,7 @@ class AddToCartAPI(GenericAPIView):
             cart=cart,
             product=product,
             size = size,
+            color = color,
             defaults={"quantity": quantity}
         )
 

@@ -2,6 +2,12 @@ from django.db import models
 
 from product_app.models import Product
 from user_app.models import User
+from django.core.validators import RegexValidator
+
+hex_color_validator = RegexValidator(
+    regex=r'^#(?:[0-9a-fA-F]{3}){1,2}$',
+    message='Enter a valid hex color code like #FFFFFF'
+)
 
 
 # Create your models here.
@@ -19,7 +25,8 @@ class CartItem(TimeStamp):
     cart = models.ForeignKey(Cart,on_delete=models.CASCADE,related_name="items")
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name="items")
     quantity = models.PositiveIntegerField()
-    size = models.CharField(max_length=10, null=True, blank=True)  # 👈 add this
+    size = models.CharField(max_length=10, null=True, blank=True)
+    color = models.CharField(max_length=7,validators=[hex_color_validator],null=True,blank=True)
 
     def __str__(self):
         return f"product : {self.product.name} | quantity : {self.quantity}"
