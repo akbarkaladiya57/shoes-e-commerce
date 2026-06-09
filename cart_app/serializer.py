@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import ast
-from cart_app.models import CartItem
+from cart_app.models import CartItem, PromoCode
 from product_app.models import Product
 from product_app.serializer import ProductImageSerializer
 
@@ -32,7 +32,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     def get_product_image(self, obj):
         request = self.context.get("request")
 
-        image = obj.product.images.first()
+        image = obj.product.images.filter(image_color=obj.color).first()
         if image:
             url = image.image.url
             if request:
@@ -41,4 +41,6 @@ class CartItemSerializer(serializers.ModelSerializer):
             return url
         return None
 
-
+class ApplyPromoSerializer(serializers.Serializer):
+    cart_id = serializers.IntegerField()
+    promo_code = serializers.CharField()

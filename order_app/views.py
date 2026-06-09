@@ -1,11 +1,17 @@
+from decimal import Decimal
+
+from django.db import transaction
 from rest_framework import viewsets
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
+from rest_framework.views import APIView
 
+from cart_app.models import Cart, CartItem
 from order_app.models import Address, OrderItem, Order
-from order_app.serializer import AddressSerializer, OrderItemSerializer, OrderSerializer
+from order_app.serializer import AddressSerializer, OrderItemSerializer, OrderSerializer, OrderListSerializer, \
+    OrderDetailSerializer, BuyNowSerializer
 
 
 # Create your views here.
@@ -86,21 +92,22 @@ class OrderAPI(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(address__user=self.request.user)
+        print(self.request.user)
+        return Order.objects.filter(user=self.request.user).prefetch_related("items__product__images")
 
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.save(user=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-
-        return Response({
-            "success": True,
-            "message": "Order created successfully",
-            "data": serializer.data
-        }, status=HTTP_201_CREATED)
+    # def create(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_create(serializer)
+    #
+    #     return Response({
+    #         "success": True,
+    #         "message": "Order created successfully",
+    #         "data": serializer.data
+    #     }, status=HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -133,3 +140,148 @@ class OrderAPI(viewsets.ModelViewSet):
             "success": True,
             "message": "Order deleted successfully"
         }, status=HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+
+        cart = Cart.objects.filter(user=user).first()
+
+        if not cart:
+            return Response({
+                "success": False,
+                "message": "Cart is empty"
+            }, status=400)
+
+        cart_items = CartItem.objects.filter(cart=cart)
+
+        if not cart_items.exists():
+            return Response({
+                "success": False,
+                "message": "No items in cart"
+            }, status=400)
+
+        subtotal = sum(
+            item.product.price * item.quantity
+            for item in cart_items
+        )
+        print("SUBTOTAL:", subtotal)
+
+        promo_code = serializer.validated_data.get("promo_code")
+        print("PROMO CODE RAW:", promo_code)
+        discount = Decimal("0.00")
+
+        if promo_code:
+            if promo_code.type == "flat":
+                discount = Decimal(str(promo_code.value))
+
+            elif promo_code.type == "percentage":
+                discount = (Decimal(str(subtotal))* Decimal(str(promo_code.value))) / Decimal("100")
+
+        print("DISCOUNT CALCULATED:", discount)
+        final_amount = Decimal(str(subtotal)) - discount
+        print("FINAL AMOUNT BEFORE FIX:", final_amount)
+
+        if final_amount < 0:
+            final_amount = Decimal("0.00")
+
+        print("FINAL AMOUNT FINAL:", final_amount)
+
+        with transaction.atomic():
+
+            order = serializer.save(
+                user=user,
+                subtotal=subtotal,
+                total_amount=final_amount,
+                discount=discount
+            )
+
+            OrderItem.objects.bulk_create([
+                OrderItem(
+                    user=user,
+                    product=item.product,
+                    quantity=item.quantity,
+                    order=order
+                )
+                for item in cart_items
+            ])
+
+            cart_items.delete()
+
+        return Response({
+            "success": True,
+            "message": "Order created successfully from cart",
+            "data": OrderSerializer(order).data
+        }, status=201)
+
+class OrderListApiView(ListAPIView):
+    serializer_class = OrderListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by("-created_at")
+
+class OrderDetailAPIView(RetrieveAPIView):
+    serializer_class = OrderDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+
+class BuyNowAPIView(APIView):
+
+    def post(self, request):
+        serializer = BuyNowSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+
+        product = serializer.validated_data["product"]
+        quantity = serializer.validated_data["quantity"]
+        address = serializer.validated_data["address"]
+        payment_method = serializer.validated_data["payment_method"]
+        promo_code = serializer.validated_data.get("promo_code")
+
+        total_amount = Decimal(str(product.price)) * quantity
+
+        discount = Decimal("0.00")
+
+        if promo_code:
+            if promo_code.type == "flat":
+                discount = Decimal(str(promo_code.value))
+
+            elif promo_code.type == "percentage":
+                discount = (
+                    total_amount * Decimal(str(promo_code.value))
+                ) / Decimal("100")
+
+        final_amount = total_amount - discount
+
+        if final_amount < 0:
+            final_amount = Decimal("0.00")
+
+        with transaction.atomic():
+
+            order = Order.objects.create(
+                user=user,
+                address=address,
+                payment_method=payment_method,
+                total_amount=final_amount,
+                discount=discount,
+            )
+
+            OrderItem.objects.create(
+                user=user,
+                order=order,
+                product=product,
+                quantity=quantity,
+            )
+
+        return Response({
+            "success": True,
+            "message": "Order created successfully",
+            "data": OrderSerializer(order).data
+        }, status=201)

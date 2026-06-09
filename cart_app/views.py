@@ -5,11 +5,11 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_202_ACCEPTED, HTTP_204_NO_CONTENT, \
-    HTTP_400_BAD_REQUEST
+    HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import APIView
 
 from cart_app.models import Cart, CartItem, PromoCode
-from cart_app.serializer import AddToCartSerializer, CartItemSerializer
+from cart_app.serializer import AddToCartSerializer, CartItemSerializer, ApplyPromoSerializer
 
 
 class AddToCartAPI(GenericAPIView):
@@ -145,17 +145,17 @@ class CheckPromoCode(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        code = request.query_params.get("code")
+        promo_code = request.query_params.get("promo_code")
 
         # Validate input
-        if not code:
+        if not promo_code:
             return Response(
                 {"status": False, "error": "Promo code is required"},
                 status=HTTP_400_BAD_REQUEST
             )
 
         # Check existence
-        if PromoCode.objects.filter(name=code).exists():
+        if PromoCode.objects.filter(name=promo_code).exists():
             return Response(
                 {"status": True, "message": "Valid promo code"},
                 status=HTTP_200_OK
@@ -165,3 +165,59 @@ class CheckPromoCode(APIView):
                 {"status": False, "error": "Invalid promo code"},
                 status=HTTP_400_BAD_REQUEST
             )
+
+
+class ApplyPromoAPIView(APIView):
+
+    def post(self, request):
+
+        serializer = ApplyPromoSerializer(data=request.data)
+
+        if serializer.is_valid():
+
+            cart_id = serializer.validated_data["cart_id"]
+            promo_name = serializer.validated_data["promo_code"]
+
+            try:
+                cart = Cart.objects.get(id=cart_id)
+            except Cart.DoesNotExist:
+                return Response(
+                    {"error": "Cart not found"},
+                    status=HTTP_404_NOT_FOUND
+                )
+
+            try:
+                promo = PromoCode.objects.get(name=promo_name)
+            except PromoCode.DoesNotExist:
+                return Response(
+                    {"error": "Invalid promo code"},
+                    status=HTTP_404_NOT_FOUND
+                )
+
+            total = 0
+
+            for item in cart.items.all():
+                total += item.product.price * item.quantity
+
+            discount = 0
+
+            if promo.type == "flat":
+                discount = promo.value
+
+            elif promo.type == "percentage":
+                discount = (total * promo.value) / 100
+
+            final_total = total - discount
+
+            if final_total < 0:
+                final_total = 0
+
+            return Response({
+                "promo_id": promo.id,
+                "cart_total": total,
+                "discount": discount,
+                "final_total": final_total,
+                "promo_code": promo.name
+            })
+
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
