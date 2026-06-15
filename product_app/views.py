@@ -4,7 +4,8 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
     GenericAPIView, ListAPIView,RetrieveDestroyAPIView
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_200_OK
+from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_200_OK, HTTP_400_BAD_REQUEST, \
+    HTTP_500_INTERNAL_SERVER_ERROR
 from rest_framework.views import APIView
 
 
@@ -13,7 +14,7 @@ from product_app.paginations import ProductPagination
 # from product_app.paginations import ProductPagination
 from product_app.permission import AdminOrReadOnly
 from product_app.serializer import CategorySerializer, ProductSerializer, ProductRUDSerializer, RatingSerializer, \
-    ProductImageSerializer, ProductLikeSerializer, ProductCardSerializer, ProductListSerializer
+    ProductImageSerializer, ProductLikeSerializer, ProductCardSerializer, ProductListSerializer, AIShoeFinderSerializer
 from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 
 # Create your views here.
@@ -185,3 +186,118 @@ class ProductLikeDetailAPIView(RetrieveDestroyAPIView):
 
     def get_queryset(self):
         return ProductLike.objects.filter(user=self.request.user)
+
+
+
+from .gemini_service import analyze_user_style
+class AI_ShoeFinderView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = AIShoeFinderSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=HTTP_400_BAD_REQUEST
+            )
+
+        validated_data = serializer.validated_data
+
+        image = validated_data["image"]
+        category_id = validated_data.get("category_id")
+        size = validated_data.get("size")
+        company_name = validated_data.get("company_name")
+
+        # These will be applied AFTER AI recommendation
+        min_price = validated_data.get("min_price")
+        max_price = validated_data.get("max_price")
+
+        try:
+            image_bytes = image.read()
+
+            # Initial filtering (before AI)
+            products = Product.objects.filter(is_delete=False)
+
+            if category_id:
+                products = products.filter(category_id=category_id)
+
+            if company_name:
+                products = products.filter(
+                    brand__icontains=company_name
+                )
+
+            if size:
+                products = products.filter(
+                    size__contains=[size]
+                )
+
+            products_data = list(
+                products.values(
+                    "id",
+                    "name",
+                    "description",
+                    "price",
+                    "is_male",
+                    "is_female",
+                    "is_child",
+                    "trending",
+                    "special_shoes",
+                    "category__name",
+                )
+            )
+
+            ai_result = analyze_user_style(
+                image_bytes=image_bytes,
+                products=products_data
+            )
+
+            if not ai_result:
+                return Response(
+                    {
+                        "success": False,
+                        "error": "Gemini failed"
+                    },
+                    status=HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # AI recommended products
+            recommended_products = Product.objects.filter(
+                id__in=ai_result.product_ids,
+                is_delete=False
+            )
+
+            # Apply price filters AFTER AI
+            if min_price is not None:
+                recommended_products = recommended_products.filter(
+                    price__gte=min_price
+                )
+
+            if max_price is not None:
+                recommended_products = recommended_products.filter(
+                    price__lte=max_price
+                )
+
+            response_serializer = ProductCardSerializer(
+                recommended_products,
+                many=True,
+                context={"request": request}
+            )
+
+            return Response(
+                {
+                    "success": True,
+                    "image_summary": ai_result.image_summary,
+                    "recommendation_reason": ai_result.recommendation_reason,
+                    "recommended_products": response_serializer.data,
+                }
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    "success": False,
+                    "error": str(e)
+                },
+                status=HTTP_500_INTERNAL_SERVER_ERROR
+            )

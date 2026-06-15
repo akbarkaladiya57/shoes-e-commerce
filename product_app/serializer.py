@@ -136,10 +136,17 @@ class ProductCardSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         first_image = obj.images.first()
-        if first_image:
-            request = self.context.get("request")
-            return request.build_absolute_uri(first_image.image.url)
-        return None
+
+        if not first_image:
+            return None
+
+        url = first_image.image.url
+        request = self.context.get("request")
+
+        if request:
+            return request.build_absolute_uri(url)
+
+        return url
 
     def get_rating(self, obj):
         ratings = Rating.objects.filter(product=obj)
@@ -202,3 +209,54 @@ class ProductLikeSerializer(serializers.ModelSerializer):
 
         return False
 
+class AIShoeFinderSerializer(serializers.Serializer):
+    image = serializers.ImageField(required=True)
+    category_id = serializers.IntegerField(required=False)
+    size = serializers.CharField(required=False, allow_blank=True)
+    company_name = serializers.CharField(required=False, allow_blank=True)
+
+    min_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False
+    )
+
+    max_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False
+    )
+
+    def validate_image(self, value):
+        allowed_extensions = ["jpg", "jpeg", "png", "webp"]
+
+        ext = value.name.split(".")[-1].lower()
+
+        if ext not in allowed_extensions:
+            raise serializers.ValidationError(
+                "Only JPG, JPEG, PNG and WEBP images are allowed."
+            )
+
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError(
+                "Image size cannot exceed 5MB."
+            )
+
+        return value
+
+    def validate(self, attrs):
+        price_min = attrs.get("price_min")
+        price_max = attrs.get("price_max")
+
+        if (
+                price_min is not None and
+                price_max is not None and
+                price_min > price_max
+        ):
+            raise serializers.ValidationError(
+                {
+                    "price_max": "price_max must be greater than or equal to price_min."
+                }
+            )
+
+        return attrs

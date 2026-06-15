@@ -2,7 +2,7 @@ from django.urls import path
 
 from product_app.views import CategoryAPI, ProductCreateAPI, ProductRetrieveUpdateAPI, AddRatingAPI, ProductRatingsAPI, \
     ProductAverageAPI, ProductImageAPI, ProductImageRUDAPI, ProductWiseImageAPI, CategoryFilterAPI, \
-    ProductLikeListCreateApiview,ProductLikeDetailAPIView
+    ProductLikeListCreateApiview,ProductLikeDetailAPIView,AI_ShoeFinderView
 
 url_patterns = [
     path("categories/",CategoryAPI.as_view(),name="categories"),
@@ -18,4 +18,6 @@ url_patterns = [
 
     path("product-likes/",ProductLikeListCreateApiview.as_view(),name="product-like-list-create"),
     path("product-likes/<int:pk>/",ProductLikeDetailAPIView.as_view(),name="product-like-detail"),
+
+    path("ai-photo/",AI_ShoeFinderView.as_view(),name="ai-photo-scan")
 ]

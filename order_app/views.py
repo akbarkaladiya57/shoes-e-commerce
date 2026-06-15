@@ -5,13 +5,13 @@ from rest_framework import viewsets
 from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import APIView
 
-from cart_app.models import Cart, CartItem
+from cart_app.models import Cart, CartItem, PromoCode
 from order_app.models import Address, OrderItem, Order
 from order_app.serializer import AddressSerializer, OrderItemSerializer, OrderSerializer, OrderListSerializer, \
-    OrderDetailSerializer, BuyNowSerializer
+    OrderDetailSerializer, BuyNowSerializer, ApplyPromoBuyNowSerializer
 
 
 # Create your views here.
@@ -142,6 +142,7 @@ class OrderAPI(viewsets.ModelViewSet):
         }, status=HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
+        print(request.data)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -169,6 +170,7 @@ class OrderAPI(viewsets.ModelViewSet):
         )
         print("SUBTOTAL:", subtotal)
 
+        print(serializer.validated_data)
         promo_code = serializer.validated_data.get("promo_code")
         print("PROMO CODE RAW:", promo_code)
         discount = Decimal("0.00")
@@ -285,3 +287,48 @@ class BuyNowAPIView(APIView):
             "message": "Order created successfully",
             "data": OrderSerializer(order).data
         }, status=201)
+
+def calculate_discount(amount, promo):
+    """
+    Centralized discount logic for reuse across views.
+    """
+    promo_type = promo.type.lower()
+
+    if promo_type == "flat":
+        return min(promo.value, amount)
+
+    if promo_type == "percentage":
+        return (amount * promo.value) / 100
+
+    return 0
+
+
+class ApplyPromoBuyNowAPIView(APIView):
+
+    def post(self, request):
+        serializer = ApplyPromoBuyNowSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+        product = serializer.validated_data["product"]
+        promo = serializer.validated_data["promo_code"]
+
+        product_price = product.price
+
+        # calculate discount safely
+        discount = calculate_discount(product_price, promo)
+        final_total = max(product_price - discount, 0)
+
+        return Response(
+            {
+                "promo_id": promo.id,
+                "promo_name": promo.name,
+                "promo_code": promo.name,  # fixed (was promo.codes in your code)
+                "product_id": product.id,
+                "product_price": product_price,
+                "discount": discount,
+                "final_total": final_total,
+            },
+            status=HTTP_200_OK
+        )

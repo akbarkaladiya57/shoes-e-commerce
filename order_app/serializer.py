@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from cart_app.models import PromoCode
@@ -20,12 +22,13 @@ class OrderItemSerializer(serializers.ModelSerializer):
     gender = serializers.SerializerMethodField()
     discount_total = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
+    final_total = serializers.SerializerMethodField()
 
 
     class Meta:
         model = OrderItem
         fields = ["id", "quantity", "product_name", "product_price", "product_image", "gender",
-                  "line_total","discount_total"]
+                  "line_total","discount_total","final_total"]
 
     def get_product_image(self, obj):
         request = self.context.get("request")
@@ -57,28 +60,20 @@ class OrderItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("quantity must be greater than 0")
         return value
 
+    def get_line_total(self, obj):
+        return obj.product.price * obj.quantity
+
     def get_discount_total(self, obj):
         order = obj.order
+        if not order:
+            return Decimal("0.00")
 
-        subtotal = sum(
-            item.product.price * item.quantity
-            for item in order.items.all()
-        )
+        return Decimal(order.discount or 0)
 
-        if not subtotal:
-            return self.get_item_total(obj)
 
-        order_discount = float(order.discount or 0)
+    def get_final_total(self, obj):
+        return self.get_line_total(obj) - self.get_discount_total(obj)
 
-        item_total = float(obj.product.price) * obj.quantity
-
-        # proportional discount
-        discount_share = (item_total / subtotal) * order_discount
-
-        return round(item_total - discount_share, 2)
-
-    def get_line_total(self, obj):
-        return obj.quantity * obj.product.price
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -173,4 +168,14 @@ class BuyNowSerializer(serializers.Serializer):
         queryset=PromoCode.objects.all(),
         required=False,
         allow_null=True
+    )
+
+class ApplyPromoBuyNowSerializer(serializers.Serializer):
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        source="product"
+    )
+    promo_code = serializers.SlugRelatedField(
+        queryset=PromoCode.objects.all(),
+        slug_field="name"  # or "code" depending on your model
     )
