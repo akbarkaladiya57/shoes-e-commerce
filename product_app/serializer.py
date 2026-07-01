@@ -129,10 +129,32 @@ class ProductCardSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     rating = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    product_images = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ["id","name","brand","price","image","rating","is_liked","color"]
+        fields = ["id","name","product_images","brand","price","image","rating","is_liked","color"]
+
+    def get_product_images(self, obj):
+        grouped = {}
+
+        images = obj.images.all()  # related_name="images"
+
+        for img in images:
+            color = img.image_color or "unknown"
+
+            if color not in grouped:
+                grouped[color] = []
+
+            request = self.context.get("request")
+            url = img.image.url
+
+            if request:
+                url = request.build_absolute_uri(url)
+
+            grouped[color].append(url)
+
+        return grouped
 
     def get_image(self, obj):
         first_image = obj.images.first()

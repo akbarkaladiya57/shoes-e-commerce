@@ -191,7 +191,6 @@ class ProductLikeDetailAPIView(RetrieveDestroyAPIView):
 
 from .gemini_service import analyze_user_style
 class AI_ShoeFinderView(APIView):
-    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
         serializer = AIShoeFinderSerializer(data=request.data)
